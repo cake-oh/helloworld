@@ -22,7 +22,6 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { // grab the base
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map); // add that tile layer to the map object
 
-
 // base map day (edit the above code and pick a base map from https://leaflet-extras.github.io/leaflet-providers/preview/)
 // also need to go into index.html to add the mappy2 variable and main.css to add the size of the map
 var map2 = L.map('mappy2').setView([30, -150], 3); // leaflet; make a map object called map; add it to the DOM object where mappy is
