@@ -12,7 +12,7 @@ L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.{ext
 }).addTo(map31); // add that tile layer to the map object
 
 // this fetches the local geojson data
-fetch('/data/map.geojson')
+fetch('/data/map_points.geojson')
     .then(response => response.json())
     .then(data => {
         L.geoJSON(data, 
@@ -48,18 +48,87 @@ L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.{ext
 	ext: 'png'
 }).addTo(map32); // add that tile layer to the map object
 
-fetch('/data/tl_2023_us_state.json')
+fetch('/data/map_choro.geojson')
     .then(response => response.json())
     .then(data => {
-        L.geoJSON(data,
-            {
-                "color": "#ff7800",
-                "weight": 5,
-                "opacity": 0.65
-            }
-            ).addTo(map32);
+        L.geoJSON(data, {
+            // color each state based on water-land ratio values
+            style: function(feature) {
+                var awater = feature.properties.AWATER;
+                var aland = feature.properties.ALAND;
+                var ratio = awater / aland;
+                var colors = ["#ffffcc", "#a1dab4", "#41b6c4", "#225ea8"];
+
+                // establish bins
+                if (ratio <= 0.02) {
+                    color = colors[0];
+                } else if (ratio <= 0.10) {
+                    color = colors[1];
+                } else if (ratio <= 0.30) {
+                    color = colors[2];
+                } else {
+                    color = colors[3];
+                }
+
+                // set aesthetics
+                return {
+                    fillColor: color,
+                    weight: 2,
+                    opacity: 1,
+                    color: 'grey',
+                    dashArray: '3',
+                    fillOpacity: 0.7
+                };
+            },
+            // establish popup w/ ratio values
+            onEachFeature: function(feature, layer) {
+                var awater = feature.properties.AWATER;
+                var aland = feature.properties.ALAND;
+                var ratio = awater / aland;
+
+                layer.bindPopup("Water-to-Land Ratio: " + ratio.toFixed(2));
+                layer.on({
+                    mouseover: function(e) {
+                        layer.openPopup();
+                    },
+                    mouseout: function(e) {
+                        layer.closePopup();
+                    }
+                });
+            },
+        }).addTo(map32);
+        
+        // add legend
+        var legend = L.control({position: 'bottomright'}); // specify placement
+
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            var grades = [0.02, 0.10, 0.30, 1];
+            var labels = [];
+            var colors = ["#ffffcc", "#a1dab4", "#41b6c4", "#225ea8"]; // create colors (same as above)
+            // var legendContent = '<div style="background-color: white; padding: 10px;">'; // create legend background
+
+            // loop through ratio intervals to make a colored square
+            for (var i = 0; i < grades.length; i++) {
+                var label = "";
+                if (i === 0) { // if 0, add first ratio bin <= 0.02
+                    label = "&le; " + grades[i];
+                } else {
+                    label = "&gt; " + grades[i - 1] + " and &le; " + grades[i]; // if not, add respective ratio bin between previous and next
+                }
+                
+                div.innerHTML +=
+                '<i style="background:' + colors[i] + '"></i> ' +
+                label + '<br>';
+        }
+    
+        return div;
+    };
+    legend.addTo(map32);
+
     })
     .catch(error => console.error('Error: ', error));
+
 
 
 
@@ -75,3 +144,9 @@ function numberWithCommas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+// calculate percentile
+function calculatePercentile(arr, percentile) {
+    arr.sort((a, b) => a - b);
+    var index = Math.ceil((percentile / 100) * arr.length);
+    return arr[index - 1];
+}
